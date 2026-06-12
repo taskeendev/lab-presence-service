@@ -13,3 +13,6 @@ spring:
 
 jwt:
   secret: ${JWT_SECRET}   # ต้องเป็นค่าเดียวกับ auth-service — นี่คือสัญญาใจของทั้งระบบ
+
+ws:
+  allowed-origins: ${ALLOWED_ORIGINS:*}   # dev เปิดกว้าง — prod ตั้งเป็น origin ของ lab-web
