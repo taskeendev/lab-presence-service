@@ -5,18 +5,23 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import java.io.IOException;
+import java.time.Instant;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-// โปรโตคอลฝั่ง client:
-//   ข้อความแรกต้องเป็น {"type":"auth","token":"<jwt>"} — ผ่านแล้วได้ {"type":"ready"}
-//   หลังจากนั้น {"type":"ping"} เป็น heartbeat — ตอบ {"type":"pong"} + อัปเดต lastSeen
-// auth ผ่าน "ข้อความแรก" ไม่ใช่ query param — token ใน URL จะติด access log ทุกชั้นที่ผ่าน
+// โปรโตคอล:
+//   client →  {"type":"auth","token"} → {"type":"ready"} | ปิด 1008
+//             {"type":"ping"} → {"type":"pong"}
+//   admin  ←  {"type":"snapshot","users":[...]} ทันทีหลัง ready
+//          ←  {"type":"online"|"offline","username","at"} เมื่อมีคนเข้า-ออก
 @Component
 public class PresenceSocketHandler extends TextWebSocketHandler {
 
@@ -26,11 +31,15 @@ public class PresenceSocketHandler extends TextWebSocketHandler {
 
     private final JwtVerifier jwt;
     private final PresenceRegistry registry;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper;   // ของ Spring — serialize Instant เป็น ISO-8601 ให้แล้ว
 
-    public PresenceSocketHandler(JwtVerifier jwt, PresenceRegistry registry) {
+    // ผู้เฝ้า (แอดมิน) — ห่อด้วย decorator เพราะ WebSocketSession ห้ามหลาย thread ส่งพร้อมกัน
+    private final Map<String, WebSocketSession> admins = new ConcurrentHashMap<>();
+
+    public PresenceSocketHandler(JwtVerifier jwt, PresenceRegistry registry, ObjectMapper mapper) {
         this.jwt = jwt;
         this.registry = registry;
+        this.mapper = mapper;
     }
 
     @Override
@@ -57,12 +66,22 @@ public class PresenceSocketHandler extends TextWebSocketHandler {
         try {
             Claims claims = jwt.verify(msg.path("token").asText());
             String username = claims.getSubject();
+            String role = claims.get("role", String.class);
             session.getAttributes().put(USERNAME, username);
-            session.getAttributes().put(ROLE, claims.get("role", String.class));
+            session.getAttributes().put(ROLE, role);
+
             if (registry.connect(username, session.getId())) {
                 log.info("online: {}", username);
+                broadcast("online", username);
             }
             session.sendMessage(new TextMessage("{\"type\":\"ready\"}"));
+
+            if ("ADMIN".equals(role)) {
+                var decorated = new ConcurrentWebSocketSessionDecorator(session, 2000, 64 * 1024);
+                admins.put(session.getId(), decorated);
+                decorated.sendMessage(new TextMessage(mapper.writeValueAsString(
+                        Map.of("type", "snapshot", "users", registry.snapshot()))));
+            }
         } catch (JwtException e) {
             session.close(CloseStatus.POLICY_VIOLATION);
         }
@@ -70,9 +89,28 @@ public class PresenceSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+        admins.remove(session.getId());
         String username = (String) session.getAttributes().get(USERNAME);
         if (username != null && registry.disconnect(username, session.getId())) {
             log.info("offline: {}", username);
+            broadcast("offline", username);
         }
+    }
+
+    private void broadcast(String type, String username) {
+        String json;
+        try {
+            json = mapper.writeValueAsString(
+                    Map.of("type", type, "username", username, "at", Instant.now()));
+        } catch (IOException e) {
+            return;
+        }
+        admins.values().forEach(admin -> {
+            try {
+                admin.sendMessage(new TextMessage(json));
+            } catch (IOException e) {
+                admins.remove(admin.getId());   // ผู้เฝ้าที่ตายแล้ว — เอาออกจากรายชื่อ
+            }
+        });
     }
 }
