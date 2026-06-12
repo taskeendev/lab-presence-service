@@ -1,0 +1,18 @@
+# lab-presence-service — Progress
+
+ส่วนหนึ่งของ **Feature Lab** — realtime presence: ใคร online/offline เมื่อไหร่ (admin dashboard)
+สถาปัตยกรรม: service แยก stateless — ตรวจ JWT เองด้วย secret ร่วม, presence อยู่ใน memory (ไม่มี DB โดยตั้งใจ)
+
+สถานะ: ⬜ ยังไม่เริ่ม · 🔨 กำลังทำ · ✅ เสร็จ
+
+## บันได 5 ขั้น
+
+- [x] 1. โครง service: env/health/request-id/CI (ไม่มี DB) — 2026-06-12
+- [ ] 2. WebSocket endpoint + auth ด้วย first message + ทะเบียน online ใน memory
+- [ ] 3. GET /api/presence (ADMIN) + push เหตุการณ์เข้า-ออกให้แอดมินแบบสด
+- [ ] 4. lab-web: ต่อ WS อัตโนมัติเมื่อ login + หน้า Admin รายชื่อสด (role ADMIN)
+- [ ] 5. Integration tests + CI เขียว + demo สองตัวตนเห็นสด (เกณฑ์เฟส)
+
+## Log การทำงาน
+
+- 2026-06-12 — ขั้น 1 เสร็จ: โครงตามแบบ auth-service (env ล้วน, /health, RequestIdFilter ใช้ log pattern เดียวกันทั้งระบบ, graceful shutdown, CI) — ไม่มี DB: presence เป็น state ชั่วครู่; JWT_SECRET ใช้ค่าเดียวกับ auth-service (ใน .env ที่ไม่ commit) — สัญญา HS512 ร่วม (อนาคตอัปเกรด RS256/JWKS ได้)
