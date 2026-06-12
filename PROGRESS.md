@@ -10,10 +10,12 @@
 - [x] 1. โครง service: env/health/request-id/CI (ไม่มี DB) — 2026-06-12
 - [x] 2. WebSocket endpoint + auth ด้วย first message + ทะเบียน online ใน memory — 2026-06-12
 - [x] 3. GET /api/presence (ADMIN) + push เหตุการณ์เข้า-ออกให้แอดมินแบบสด — 2026-06-12
-- [ ] 4. lab-web: ต่อ WS อัตโนมัติเมื่อ login + หน้า Admin รายชื่อสด (role ADMIN)
-- [ ] 5. Integration tests + CI เขียว + demo สองตัวตนเห็นสด (เกณฑ์เฟส)
+- [x] 4. lab-web: ต่อ WS อัตโนมัติเมื่อ login + หน้า Admin รายชื่อสด (role ADMIN) — 2026-06-12 (ดู lab-web)
+- [x] 5. Integration tests + CI เขียว + demo สองตัวตนเห็นสด (เกณฑ์เฟส) — 2026-06-12
 
 ## Log การทำงาน
+
+- 2026-06-12 — ขั้น 5 เสร็จ = **เฟส presence จบ**: integration tests ด้วย JDK WebSocket client ล้วน (ไม่เพิ่ม dep) — token ปั้มในเทสต์ด้วย secret เดียวกัน = พิสูจน์สัญญา JWT โดยไม่ต้องมี auth-service; ครอบ: bad token →1008, admin snapshot, online ครั้งเดียวจาก 2 แท็บ, REST sessions=2/403/401, offline เมื่อแท็บสุดท้ายปิด
 
 - 2026-06-12 — ขั้น 3 เสร็จ: starter-security + JwtAuthFilter (pattern เดิม) — permitAll /ws/** (auth ในโปรโตคอลแล้ว); GET /api/presence @PreAuthorize ADMIN (403 ทำงานที่ชั้น filter เพราะไม่มี catch-all advice มากลืน — บทเรียน auth-service ภาคกลับ); handler จำผู้เฝ้า (role ADMIN) ห่อ ConcurrentWebSocketSessionDecorator (session ห้ามส่งพร้อมกันหลาย thread) → ส่ง snapshot ทันที + broadcast online/offline; ผู้เฝ้าที่ส่งไม่ได้ถูกถอดทิ้ง; เทสต์สด: snapshot/online/offline ครบ + REST 401/403/200
 
