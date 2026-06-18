@@ -19,8 +19,8 @@ repositories {
     maven {        // CI/Docker: lab-common จาก GitHub Packages (creds จาก env)
         url = uri("https://maven.pkg.github.com/taskeendev/lab-common")
         credentials {
-            username = System.getenv("GITHUB_ACTOR")
-            password = System.getenv("GITHUB_TOKEN")
+            username = System.getenv("GITHUB_ACTOR")?.trim()
+            password = System.getenv("GITHUB_TOKEN")?.trim()   // กัน newline จาก secret หลุดมา = 401
         }
     }
 }
