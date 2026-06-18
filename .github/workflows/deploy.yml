@@ -26,7 +26,7 @@ jobs:
           build-args: |
             GITHUB_ACTOR=${{ github.actor }}
           secrets: |
-            gh_token=${{ secrets.GITHUB_TOKEN }}
+            gh_token=${{ secrets.PACKAGES_TOKEN }}
           tags: |
             ghcr.io/taskeendev/lab-presence-service:latest
             ghcr.io/taskeendev/lab-presence-service:${{ github.sha }}
