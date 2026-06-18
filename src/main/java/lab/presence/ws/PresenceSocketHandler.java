@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
+import lab.common.security.JwtVerifier;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Map;

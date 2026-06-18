@@ -14,10 +14,19 @@ java {
 }
 
 repositories {
+    mavenLocal()   // local dev: lab-common จาก ./gradlew publishToMavenLocal
     mavenCentral()
+    maven {        // CI/Docker: lab-common จาก GitHub Packages (creds จาก env)
+        url = uri("https://maven.pkg.github.com/taskeendev/lab-common")
+        credentials {
+            username = System.getenv("GITHUB_ACTOR")
+            password = System.getenv("GITHUB_TOKEN")
+        }
+    }
 }
 
 dependencies {
+    implementation("lab:lab-common:0.1.0")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-websocket")
     implementation("org.springframework.boot:spring-boot-starter-security")

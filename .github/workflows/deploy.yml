@@ -23,6 +23,10 @@ jobs:
           context: .
           platforms: linux/arm64
           push: true
+          build-args: |
+            GITHUB_ACTOR=${{ github.actor }}
+          secrets: |
+            gh_token=${{ secrets.GITHUB_TOKEN }}
           tags: |
             ghcr.io/taskeendev/lab-presence-service:latest
             ghcr.io/taskeendev/lab-presence-service:${{ github.sha }}
